@@ -1,25 +1,69 @@
-const express = require('express')
-const logger = require('morgan')
-const cors = require('cors')
+const express = require("express");
+const logger = require("morgan");
+const cors = require("cors");
+const listContacts = require("./model/index");
 
-const contactsRouter = require('./routes/api/contacts')
+const contactsRouter = require("./routes/api/contacts");
 
-const app = express()
+const app = express();
 
-const formatsLogger = app.get('env') === 'development' ? 'dev' : 'short'
+const formatsLogger = app.get("env") === "development" ? "dev" : "short";
 
-app.use(logger(formatsLogger))
-app.use(cors())
-app.use(express.json())
+app.use(logger(formatsLogger));
+app.use(cors());
+app.use(express.json());
 
-app.use('/api/contacts', contactsRouter)
+app.use("/api/contacts", contactsRouter);
 
 app.use((req, res) => {
-  res.status(404).json({ message: 'Not found' })
-})
+  res.status(404).json({ message: "Not found" });
+});
 
 app.use((err, req, res, next) => {
-  res.status(500).json({ message: err.message })
-})
+  res.status(500).json({ message: err.message });
+});
 
-module.exports = app
+//
+
+app.get("/api/contacts", () => {
+  listContacts();
+  // ничего не получает
+  // вызывает функцию listContacts для работы с json-файлом contacts.json
+  // возвращает массив всех контактов в json-формате со статусом 200
+});
+
+app.get("/api/contacts/:id", (id) => {
+  // Не получает body
+  // Получает параметр id
+  // вызывает функцию getById для работы с json-файлом contacts.json
+  // если такой id есть, возвращает объект контакта в json-формате со статусом 200
+  // если такого id нет, возвращает json с ключом "message": "Not found" и статусом 404
+});
+
+app.post("/api/contacts", ({ name, email, phone }) => {
+  // Получает body в формате {name, email, phone} (все поля обязательны)
+  // Если в body нет каких-то обязательных полей, возвращает json с ключом {"message": "missing required name field"} и статусом 400
+  // Если с body все хорошо, добавляет уникальный идентификатор в объект контакта
+  // Вызывает функцию addContact(body) для сохранения контакта в файле contacts.json
+  // По результату работы функции возвращает объект с добавленным id {id, name, email, phone} и статусом 201
+});
+
+app.delete("/api/contacts/:id", (id) => {
+  // Не получает body
+  // Получает параметр id
+  // вызывает функцию removeContact для работы с json-файлом contacts.json
+  // если такой id есть, возвращает json формата {"message": "contact deleted"} и статусом 200
+  // если такого id нет, возвращает json с ключом "message": "Not found" и статусом 404
+});
+
+app.put("/api/contacts/:id", ({ id, name, email, phone }) => {
+  // Получает параметр id
+  // Получает body в json-формате c обновлением любых полей name, email и phone
+  // Если body нет, возвращает json с ключом {"message": "missing fields"} и статусом 400
+  // Если с body все хорошо, вызывает функцию updateContact(contactId, body) (напиши ее) для обновления контакта в файле contacts.json
+  // По результату работы функции возвращает обновленный объект контакта и статусом 200. В противном случае, возвращает json с ключом "message": "Not found" и статусом 404
+});
+
+//
+
+module.exports = app;
