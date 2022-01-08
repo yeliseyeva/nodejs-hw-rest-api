@@ -31,14 +31,20 @@ const userSchema = Schema(
 
 const User = model("user", userSchema);
 
-const joiSchema = Joi.object({
+const joiRegisterSchema = Joi.object({
   password: Joi.string().min(6).required(),
   email: Joi.string().pattern(emailRegexp).required(),
   subscription: Joi.string().valid("starter", "pro", "business"),
   token: Joi.string(),
 });
 
+const joiLoginSchema = Joi.object({
+  password: Joi.string().min(6).required(),
+  email: Joi.string().pattern(emailRegexp).required(),
+});
+
 module.exports = {
   User,
-  joiSchema,
+  joiRegisterSchema,
+  joiLoginSchema,
 };
