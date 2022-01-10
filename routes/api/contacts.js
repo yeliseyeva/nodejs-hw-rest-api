@@ -2,6 +2,7 @@ const express = require("express");
 const createError = require("http-errors");
 const router = express.Router();
 const Joi = require("joi");
+const { authenticate } = require("../../middlewares");
 
 const { Contact } = require("../../model");
 const { findByIdAndRemove } = require("../../model/contact");
@@ -12,9 +13,13 @@ const joiShema = Joi.object({
   phone: Joi.string().required(),
 });
 
-router.get("/", async (req, res, next) => {
+router.get("/", authenticate, async (req, res, next) => {
   try {
-    const contacts = await Contact.find();
+    const { _id } = req.user;
+    const contacts = await Contact.find(
+      { owner: _id },
+      "-createdAt -updatedAt"
+    );
     res.json(contacts);
   } catch (error) {
     next(error);
@@ -39,14 +44,15 @@ router.get("/:contactId", async (req, res, next) => {
   }
 });
 
-router.post("/", async (req, res, next) => {
+router.post("/", authenticate, async (req, res, next) => {
   try {
     const { error } = joiShema.validate(req.body);
     if (error) {
       throw new createError(400, "missing required name field");
     }
+    const { _id } = req.user;
     // const newContact = await contactsOperations.addContact(req.body);
-    const newContact = await Contact.create(req.body);
+    const newContact = await Contact.create({ ...req.body, owner: _id });
     res.status(201).json(newContact);
   } catch (error) {
     if (error.message.includes("validation failed")) {
