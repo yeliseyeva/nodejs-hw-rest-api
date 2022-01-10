@@ -6,6 +6,8 @@ const { BadRequest, Conflict, Unauthorized } = require("http-errors");
 
 const jwt = require("jsonwebtoken");
 
+const { authenticate } = require("../../middlewares");
+
 const bcrypt = require("bcryptjs");
 const router = express.Router();
 
@@ -18,7 +20,7 @@ router.post("/signup", async (req, res, next) => {
     if (error) {
       throw new BadRequest(error.message);
     }
-    const { email, password } = req.body;
+    const { email, password, subscription } = req.body;
     const user = await User.findOne({ email });
 
     if (user) {
@@ -26,10 +28,15 @@ router.post("/signup", async (req, res, next) => {
     }
     const salt = await bcrypt.genSalt(10);
     const hashPassword = await bcrypt.hash(password, salt);
-    const newUser = await User.create({ email, password: hashPassword });
+    const newUser = await User.create({
+      email,
+      subscription,
+      password: hashPassword,
+    });
     res.status(201).json({
       user: {
         email: newUser.email,
+        subscription: newUser.subscription,
       },
     });
   } catch (error) {
@@ -54,7 +61,7 @@ router.post("/login", async (req, res, next) => {
       throw new Unauthorized("Email or password is wrong");
     }
 
-    const { _id } = user;
+    const { subscription, _id } = user;
 
     const payload = {
       id: _id,
@@ -65,8 +72,8 @@ router.post("/login", async (req, res, next) => {
     res.json({
       token,
       user: {
-        email: user.email,
-        subscription: user.subscription,
+        email,
+        subscription,
       },
     });
   } catch (error) {
@@ -74,39 +81,18 @@ router.post("/login", async (req, res, next) => {
   }
 });
 
-router.post("/logout", async (req, res, next) => {
-  try {
-    const { error } = joiLoginSchema.validate(req.body);
-    console.log(error);
-    if (error) {
-      throw new BadRequest(error.message);
-    }
-    const { email, password } = req.body;
-    const user = await User.findOne({ email });
-    console.log(user);
-    if (!user) {
-      throw new Unauthorized("Email or password is wrong");
-    }
+router.get("/logout", authenticate, async (req, res, next) => {
+  const { _id } = req.user;
+  await User.findByIdAndUpdate(_id, { token: null });
+  res.status(204).send();
+});
 
-    const passwordCompare = await bcrypt.compare(password, user.password);
-    if (!passwordCompare) {
-      throw new Unauthorized("Email or password is wrong");
-    }
-
-    const payload = {
-      id: user._id,
-    };
-
-    const token = jwt.sign(payload, SECRET_KEY, { expiresIn: "1h" });
-    res.json({
-      token,
-      user: {
-        email: user.email,
-      },
-    });
-  } catch (error) {
-    next(error);
-  }
+router.get("/current", authenticate, async (req, res, next) => {
+  const { email, subscription } = req.user;
+  res.status(200).json({
+    email,
+    subscription,
+  });
 });
 
 module.exports = router;
