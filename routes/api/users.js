@@ -14,6 +14,8 @@ const path = require("path");
 
 const { authenticate, upload } = require("../../middlewares");
 
+const jimp = require("../../helpers/jimp");
+
 const bcrypt = require("bcryptjs");
 const router = express.Router();
 
@@ -113,6 +115,7 @@ router.patch(
   upload.single("avatar"),
   async (req, res, next) => {
     const { path: tempUpload, filename } = req.file;
+    await jimp(tempUpload);
     const [extension] = filename.split(".").reverse();
     const newFileName = `${req.user._id}.${extension}`;
     const fileUpload = path.join(avatarsDir, newFileName);
